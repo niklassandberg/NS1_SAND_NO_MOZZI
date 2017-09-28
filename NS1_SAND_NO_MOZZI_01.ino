@@ -5,7 +5,7 @@
 
 #include <BO_NS1_DIGIPOTS.h>
 
-#include <BOMIDI.h>
+#include <BOMIDI2.h>
 
 #include <utils/array_container_size.h>
 
@@ -249,7 +249,8 @@ public:
 
 Pots gPots;
 
-BoMidi gMidi;
+//BoMidi gMidi;
+
 ToneHandler gNotes(NOTES_BUFFER, PITCH_RANGE);
 
 
@@ -294,6 +295,14 @@ void outputNotes()
   dac.outputA( tone );
 }
 
+BoMidi<
+  BoMidiFilter<1, MIDITYPE::NOTEON, noteon, keyBetween<MIN_NOTE,MAX_NOTE> > ,
+  BoMidiFilter<1, MIDITYPE::NOTEOFF, noteoff, keyBetween<MIN_NOTE,MAX_NOTE> > ,
+  BoMidiFilter<1, MIDITYPE::PB, pitch> ,
+  BoMidiFilter<1, MIDITYPE::CC, changedCC, controlBetween<MIN_CC, MAX_CC> >,
+  BoMidiFilter<1, MIDITYPE::CC, changedMod, controlBetween<1,1> >
+> gMidi;
+
 void updateNS1()
 {
   gMidi.ifMidiDo();
@@ -317,6 +326,7 @@ void setup() {
   Wire.begin();
   dac.setGain(2);
 
+  /*
   const BoMidiFilter midifiler[] =
   {
     BoMidiFilter( 1, MIDITYPE::NOTEON , noteon , keyBetween<MIN_NOTE, MAX_NOTE> ) ,
@@ -327,6 +337,7 @@ void setup() {
     BO_MIDI_FILTER_ARRAY_END
   };
   gMidi.setup(midifiler);
+  */
 }
 
 
