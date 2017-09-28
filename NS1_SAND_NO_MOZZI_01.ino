@@ -2,9 +2,11 @@
 #include <DAC_MCP49xx.h>
 
 #include <TimerOne.h>
-#include "Wire.h"       //i2c lib to drive the quad digipot chip
+
+#include <BO_NS1_DIGIPOTS.h>
 
 #include <BOMIDI.h>
+
 #include <utils/array_container_size.h>
 
 // ------------------- FIXED CONSTANTS ---------------------------
@@ -28,6 +30,9 @@
 
 #define MIN_NOTE 36
 #define MAX_NOTE MIN_NOTE+61
+
+#define MIN_CC 34
+#define MAX_CC 37
 
 #define NOTES_BUFFER 127
 #define PITCH_RANGE 2
@@ -166,6 +171,83 @@ class ToneHandler
       if ( ! mNotes.empty() ) mMIDIDirty = true;
     }
 };
+  
+class Pots
+{
+  
+  class Pot {
+
+    
+    
+    uint8_t mCC = 0;
+    uint8_t mValue = 0;
+    bool mCCReady = false;
+  
+  public:
+
+    void cc(uint8_t cc)
+    {
+      mCC = cc;
+    }
+  
+    void readIfCC(uint8_t cc, uint8_t value)
+    {
+      Serial.print("cc:");Serial.print(cc);
+      Serial.print(" val:");Serial.println(value);
+      if(mCC!=cc) return;
+      
+      Serial.print("read cc:");Serial.print(cc);
+      Serial.print(" val:");Serial.println(value);
+      
+      mCCReady = true;
+      mValue = value << 1;
+    }
+  
+    void writeIfReady(uint8_t potIndex)
+    {
+      if( mCCReady )
+      {
+      Serial.print("write cc:");Serial.print(mCC);
+      Serial.print(" potIndex:");Serial.print(potIndex);
+      Serial.print(" val:");Serial.println(mValue);
+      ns1digipots::write(potIndex, mValue);
+        mCCReady = false;
+      }
+    }
+  };
+  
+  Pot mPots[4];
+
+public:
+  
+  Pots()
+  {
+    uint8_t x = MIN_CC;
+    for(size_t i = 0 ; i < 4 ; ++i)
+      mPots[i].cc(x++);
+  }
+  
+  void write()
+  {
+    //it is necessary to move the i2c routines out of the callback. 
+    //probably due to some interrupt handling!
+    for( int i = 0; i < 4; ++i )
+    {
+      mPots[i].writeIfReady(i);
+    }
+  }
+
+  void read(uint8_t cc, uint8_t value)
+  {
+    for( int i = 0; i < 4; ++i )
+    {
+      mPots[i].readIfCC(cc,value);
+    }
+  }
+};
+
+
+Pots gPots;
 
 BoMidi gMidi;
 ToneHandler gNotes(NOTES_BUFFER, PITCH_RANGE);
@@ -190,12 +272,15 @@ void pitch(uint8_t lsb, uint8_t msb)
 
 void changedMod(uint8_t cc, uint8_t value)
 {
+  Serial.println("changedMod");
   if (value <= 3) dac.outputB(0);
   else dac.outputB(value * 32);
 }
 
 void changedCC(uint8_t cc, uint8_t value)
 {
+  Serial.println("changedCC");
+  gPots.read(cc,value);
 }
 
 
@@ -228,15 +313,16 @@ void setup() {
   pinMode( KNOB_1_PIN, INPUT );
 
   digitalWrite( TRIGGER_PIN, LOW);
+  
+  Wire.begin();
   dac.setGain(2);
-
 
   const BoMidiFilter midifiler[] =
   {
     BoMidiFilter( 1, MIDITYPE::NOTEON , noteon , keyBetween<MIN_NOTE, MAX_NOTE> ) ,
     BoMidiFilter( 1, MIDITYPE::NOTEOFF, noteoff, keyBetween<MIN_NOTE, MAX_NOTE> ) ,
     BoMidiFilter( 1, MIDITYPE::PB, pitch) ,
-    BoMidiFilter( 1, MIDITYPE::CC, changedCC, controlBetween<34, 37>) ,
+    BoMidiFilter( 1, MIDITYPE::CC, changedCC, controlBetween<MIN_CC, MAX_CC>) ,
     BoMidiFilter( 1, MIDITYPE::CC, changedMod, controlBetween<1, 1>) ,
     BO_MIDI_FILTER_ARRAY_END
   };
@@ -246,4 +332,5 @@ void setup() {
 
 
 void loop() {
+  gPots.write();
 }
