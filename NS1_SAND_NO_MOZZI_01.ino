@@ -1,12 +1,8 @@
 #include <SPI.h>
 #include <DAC_MCP49xx.h>
-
 #include <TimerOne.h>
-
 #include <BO_NS1_DIGIPOTS.h>
-
 #include <BOMIDI2.h>
-
 #include <utils/array_container_size.h>
 
 // ------------------- FIXED CONSTANTS ---------------------------
@@ -174,10 +170,7 @@ class ToneHandler
   
 class Pots
 {
-  
   class Pot {
-
-    
     
     uint8_t mCC = 0;
     uint8_t mValue = 0;
@@ -192,13 +185,6 @@ class Pots
   
     void readIfCC(uint8_t cc, uint8_t value)
     {
-      Serial.print("cc:");Serial.print(cc);
-      Serial.print(" val:");Serial.println(value);
-      if(mCC!=cc) return;
-      
-      Serial.print("read cc:");Serial.print(cc);
-      Serial.print(" val:");Serial.println(value);
-      
       mCCReady = true;
       mValue = value << 1;
     }
@@ -207,10 +193,7 @@ class Pots
     {
       if( mCCReady )
       {
-      Serial.print("write cc:");Serial.print(mCC);
-      Serial.print(" potIndex:");Serial.print(potIndex);
-      Serial.print(" val:");Serial.println(mValue);
-      ns1digipots::write(potIndex, mValue);
+        ns1digipots::write(potIndex, mValue);
         mCCReady = false;
       }
     }
@@ -246,16 +229,25 @@ public:
   }
 };
 
-
-Pots gPots;
-
-//BoMidi gMidi;
-
-ToneHandler gNotes(NOTES_BUFFER, PITCH_RANGE);
-
+void noteon(uint8_t note, uint8_t velocity);
+void noteoff(uint8_t note, uint8_t velocity);
+void pitch(uint8_t lsb, uint8_t msb);
+void changedMod(uint8_t cc, uint8_t value);
+void changedCC(uint8_t cc, uint8_t value);
+void outputNotes();
 
 DAC_MCP49xx dac(DAC_MCP49xx::MCP4922, NS1_DAC_SS, -1);
 
+Pots gPots;
+ToneHandler gNotes(NOTES_BUFFER, PITCH_RANGE);
+
+BoMidi<
+  BoMidiFilter<1, MIDITYPE::NOTEON, noteon, keyBetween<MIN_NOTE,MAX_NOTE> > ,
+  BoMidiFilter<1, MIDITYPE::NOTEOFF, noteoff, keyBetween<MIN_NOTE,MAX_NOTE> > ,
+  BoMidiFilter<1, MIDITYPE::PB, pitch> ,
+  BoMidiFilter<1, MIDITYPE::CC, changedCC, controlBetween<MIN_CC, MAX_CC> >,
+  BoMidiFilter<1, MIDITYPE::CC, changedMod, controlBetween<1,1> >
+> gMidi;
 
 void noteon(uint8_t note, uint8_t velocity)
 {
@@ -273,14 +265,12 @@ void pitch(uint8_t lsb, uint8_t msb)
 
 void changedMod(uint8_t cc, uint8_t value)
 {
-  Serial.println("changedMod");
   if (value <= 3) dac.outputB(0);
   else dac.outputB(value * 32);
 }
 
 void changedCC(uint8_t cc, uint8_t value)
 {
-  Serial.println("changedCC");
   gPots.read(cc,value);
 }
 
@@ -295,14 +285,6 @@ void outputNotes()
   dac.outputA( tone );
 }
 
-BoMidi<
-  BoMidiFilter<1, MIDITYPE::NOTEON, noteon, keyBetween<MIN_NOTE,MAX_NOTE> > ,
-  BoMidiFilter<1, MIDITYPE::NOTEOFF, noteoff, keyBetween<MIN_NOTE,MAX_NOTE> > ,
-  BoMidiFilter<1, MIDITYPE::PB, pitch> ,
-  BoMidiFilter<1, MIDITYPE::CC, changedCC, controlBetween<MIN_CC, MAX_CC> >,
-  BoMidiFilter<1, MIDITYPE::CC, changedMod, controlBetween<1,1> >
-> gMidi;
-
 void updateNS1()
 {
   gMidi.ifMidiDo();
@@ -312,9 +294,7 @@ void updateNS1()
 }
 
 void setup() {
-
-  Serial.begin(9600);
-
+  
   Timer1.initialize(8000);          //check MIDI packets each XXX ms
   Timer1.attachInterrupt(updateNS1); // blinkLED to run every 0.15 seconds
 
@@ -325,19 +305,6 @@ void setup() {
   
   Wire.begin();
   dac.setGain(2);
-
-  /*
-  const BoMidiFilter midifiler[] =
-  {
-    BoMidiFilter( 1, MIDITYPE::NOTEON , noteon , keyBetween<MIN_NOTE, MAX_NOTE> ) ,
-    BoMidiFilter( 1, MIDITYPE::NOTEOFF, noteoff, keyBetween<MIN_NOTE, MAX_NOTE> ) ,
-    BoMidiFilter( 1, MIDITYPE::PB, pitch) ,
-    BoMidiFilter( 1, MIDITYPE::CC, changedCC, controlBetween<MIN_CC, MAX_CC>) ,
-    BoMidiFilter( 1, MIDITYPE::CC, changedMod, controlBetween<1, 1>) ,
-    BO_MIDI_FILTER_ARRAY_END
-  };
-  gMidi.setup(midifiler);
-  */
 }
 
 
