@@ -29,7 +29,7 @@
 #define MIN_NOTE 36
 #define MAX_NOTE MIN_NOTE+61
 
-#define NOTES_BUFFER 64
+#define NOTES_BUFFER 127
 #define PITCH_RANGE 2
 #define TRIGGER_PIN 5
 #define KNOB_1_PIN A1
@@ -43,9 +43,10 @@ class ToneHandler
     const int16_t ANALOG_HALF_BEND; 
 
     uint16_t mCurrentTone;
+    uint16_t mNextTone;
     bool mNoteOverlap;
 
-    array_container<uint16_t,NOTES_BUFFER> mNotes; //notes beging pressed down.
+    array_container<uint8_t,NOTES_BUFFER> mNotes; //notes beging pressed down.
     bool mMIDIDirty; //indicates that midi has changed the tone.
     int16_t mBend; //pitch value for dac.
 
@@ -56,9 +57,9 @@ class ToneHandler
       return dacVal;
     }
 
-    void removeDacTone(uint16_t dacTone)
+    void removeMidiNote(uint8_t note)
     {
-      size_t index = mNotes.index( dacTone );
+      size_t index = mNotes.index( note );
       if ( index != mNotes.index_end() )
       {
         mNotes.remove_at(index);
@@ -68,9 +69,17 @@ class ToneHandler
 
     void setOverlap()
     {
+      //Setting mCurrentTone = MAX_DAC_KEY_MIDI_MAP_VAL+1;
+      //halts the slide if mNotes has one note.
+      if(mNotes.size())
+      {
+        mNextTone = midiToDacVal( mNotes.peek_back() );
+      }
+      
       if (mNotes.size() && mCurrentTone < MAX_DAC_KEY_MIDI_MAP_VAL+1)
       {
-        mNoteOverlap = mCurrentTone != mNotes.peek_back();
+        mNextTone = midiToDacVal( mNotes.peek_back() );
+        mNoteOverlap = mCurrentTone != mNextTone;
       }
       else 
       {
@@ -105,19 +114,17 @@ class ToneHandler
 
     void addNote(uint8_t midiNote)
     {
-      uint16_t dacTone = midiToDacVal(midiNote);
       // remove note if it is already being played
-      removeDacTone(dacTone);
+      removeMidiNote(midiNote);
       // add new note with calculated dacVal
-      mNotes.push_back(dacTone);
-      mMIDIDirty = true;
+      mNotes.push_back(midiNote);
       setOverlap();
+      mMIDIDirty = true;
     }
 
     void removeNote(uint8_t midiNote)
     {
-      uint16_t dacNote = midiToDacVal(midiNote);
-      removeDacTone( dacNote );
+      removeMidiNote( midiNote );
       setOverlap();
     }
 
@@ -141,11 +148,11 @@ class ToneHandler
       if ( mNoteOverlap )
       {
         //TODO: make glideFilter functor or something so chifting can be made between alpegiator etc.
-        mCurrentTone = glideFilter(mNotes.peek_back(), mCurrentTone);
+        mCurrentTone = glideFilter(mNextTone, mCurrentTone);
       }
       else
       {
-        mCurrentTone = mNotes.peek_back();
+        mCurrentTone = mNextTone;
       }
       return (uint16_t) mCurrentTone + mBend;
     }
