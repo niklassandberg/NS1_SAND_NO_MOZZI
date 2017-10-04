@@ -6,9 +6,6 @@
 
 #include <bofilters.h>
 
-#define NOTES_BUFFER 127
-
-
 // ------------------- FIXED CONSTANTS ---------------------------
 // -- !!! DO NOT CHANGE IF YOU DONT KNOW WHAT YOU ARE DOING !!! --
 // ---------------------------------------------------------------
@@ -16,12 +13,12 @@
 // Most significant bit and least significant bit at pitch:
 // ([0-127] << 7) + [0-127] = [0-16383]
 #define MAX_PITCH_MIDI_VALUE 16383
-#define MAX_DAC_KEY_MIDI_MAP_VAL 4095
+#define MAX_DAC_KEY 4095
 
 // MCP4922 is 12 bit DAC. 2^12 = 4096
 #define DAC_MAX_VALUE 4096
-// DAC_SEMI_TONE_VALUE
-#define DAC_SEMI_TONE_VALUE 68
+// DAC_SEMI_TONE
+#define DAC_SEMI_TONE 68
 
 enum KeyMode {
   NORMAL,
@@ -36,6 +33,7 @@ enum GateState
   IS_LOW
 };
 
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 class ToneHandler
 {
   bool mAllpegiatorOn;
@@ -47,8 +45,6 @@ class ToneHandler
     uint16_t mGlideFactor;
   
     const int16_t ANALOG_HALF_BEND;
-    const uint8_t MINNOTE;
-    const uint8_t MAXNOTE;
 
     uint16_t mCurrentTone;
     uint16_t mNextTone;
@@ -58,7 +54,7 @@ class ToneHandler
 
     size_t mNoteIndex;
     //notes beging pressed down.
-    array_container<uint8_t, NOTES_BUFFER> mNotes;
+    array_container<uint8_t, NOTESBUFFER> mNotes;
     //indicates that midi has changed the tone.
     bool mMIDIDirty;
     //pitch value for dac.
@@ -70,14 +66,15 @@ class ToneHandler
 
 uint16_t midiToDacVal(uint8_t midiVal)
 {
-  uint16_t dacVal = map(midiVal, MINNOTE, MAXNOTE - 1, 0, MAX_DAC_KEY_MIDI_MAP_VAL);
+  if( midiVal > MAXNOTE ) return MAX_DAC_KEY;
+  uint16_t dacVal = (midiVal - MINNOTE) * DAC_SEMI_TONE;
   dacVal += (2 & midiVal) ? 1 : 0; //correlate dac semitones based on analyse.
   return dacVal;
 }
 
   public:
   
-    ToneHandler(uint8_t noteBuffer, uint8_t pitchRange, uint8_t minNote, uint8_t maxNote);
+    ToneHandler(uint8_t pitchRange);
 
     bool update();
     void utdated();
@@ -106,5 +103,8 @@ uint16_t midiToDacVal(uint8_t midiVal)
         mNotes.clear(); 
     }
 };
+
+//template 
+#include "botonehandler.cpp"
 
 #endif

@@ -1,6 +1,10 @@
+#ifndef _TONE_HANDLER_CPP_
+#define _TONE_HANDLER_CPP_
+
 #include "botonehandler.h"
 
-void ToneHandler::removeMidiNote(uint8_t note)
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeMidiNote(uint8_t note)
 {
   size_t index = mNotes.index( note );
   if ( index != mNotes.index_end() )
@@ -10,35 +14,38 @@ void ToneHandler::removeMidiNote(uint8_t note)
   }
 }
 
-void ToneHandler::setOverlap(uint8_t noteIndex)
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap(uint8_t noteIndex)
 {
   //Setting mCurrentTone = MAX_DAC_KEY_MIDI_MAP_VAL+1;
   //halts the slide if mNotes has one note.
   if (mNotes.size())
   {
-    //Serial.print("mNotes[noteIndex]: "); //Serial.println(mNotes[noteIndex]);
-    mNextTone = midiToDacVal( mNotes[noteIndex] );
+    //TODO: cannot put const in template arguments. Why?!
+    mNextTone = midikeyToDac<36,97,DAC_SEMI_TONE,MAX_DAC_KEY>( mNotes[noteIndex] );
   }
 
-  if (mNotes.size() && mCurrentTone < MAX_DAC_KEY_MIDI_MAP_VAL + 1)
+  if (mNotes.size() && ! (mCurrentTone > MAX_DAC_KEY) )
   {
     mNoteOverlap = mCurrentTone != mNextTone;
   }
   else
   {
-    mCurrentTone = MAX_DAC_KEY_MIDI_MAP_VAL + 1;
+    mCurrentTone = MAX_DAC_KEY + 1;
     mNoteOverlap = false;
   }
 }
 
-void ToneHandler::setOverlap()
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap()
 {
   mNoteIndex = mNotes.size() - 1;
   setOverlap(mNoteIndex);
 }
 
-ToneHandler::ToneHandler(uint8_t noteBuffer, uint8_t pitchRange, uint8_t minNote, uint8_t maxNote) :
-  ANALOG_HALF_BEND( ( (uint16_t) pitchRange ) * DAC_SEMI_TONE_VALUE ) ,
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::ToneHandler(uint8_t pitchRange) :
+  ANALOG_HALF_BEND( ( (uint16_t) pitchRange ) * DAC_SEMI_TONE ) ,
   mMIDIDirty(false) ,
   mBend(0) ,
   mCurrentTone(0) ,
@@ -47,11 +54,11 @@ ToneHandler::ToneHandler(uint8_t noteBuffer, uint8_t pitchRange, uint8_t minNote
   mKeyMode(NORMAL),
   mAllpegiatorOn(false),
   mGateState(IS_LOW),
-  mGateChanged(false),
-  MINNOTE(minNote), MAXNOTE(maxNote)
+  mGateChanged(false)
 {}
 
-void ToneHandler::allpegiator()
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
 {
   if( ! mAllpegiatorOn ) return;
   else if ( mGateState == IS_LOW || ! mGateChanged ) return;
@@ -84,7 +91,8 @@ void ToneHandler::allpegiator()
 }
 
 
-bool ToneHandler::update()
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::update()
 {
   if (mAllpegiatorOn)
     return mGateChanged || mNoteOverlap;
@@ -92,12 +100,14 @@ bool ToneHandler::update()
     return mMIDIDirty || mNoteOverlap;
 }
 
-void ToneHandler::utdated()
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::utdated()
 {
   mMIDIDirty = false;
 }
 
-bool ToneHandler::gateOn()
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::gateOn()
 {
   //Serial.print("gateOn:"); Serial.println(mNotes.empty());
   if (mAllpegiatorOn)
@@ -106,7 +116,8 @@ bool ToneHandler::gateOn()
     return ! mNotes.empty();
 }
 
-void ToneHandler::addNote(uint8_t midiNote)
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::addNote(uint8_t midiNote)
 {
   // remove note if it is already being played
   if(!mHold) removeMidiNote(midiNote);
@@ -115,14 +126,16 @@ void ToneHandler::addNote(uint8_t midiNote)
   setOverlap();
 }
 
-void ToneHandler::removeNote(uint8_t midiNote)
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeNote(uint8_t midiNote)
 {
   //if(mHold) return;
   removeMidiNote( midiNote );
   setOverlap();
 }
 
-uint16_t ToneHandler::currentTone()
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+uint16_t ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::currentTone()
 {
   if(mNoteOverlap)
     keyGlide2(mNextTone, mCurrentTone, mGlideFactor);
@@ -132,10 +145,13 @@ uint16_t ToneHandler::currentTone()
 }
 
 // pitch bend is +/- ANALOG_HALF_BEND semitones
-void ToneHandler::addPitch(uint16_t pitch)
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::addPitch(uint16_t pitch)
 {
   // allow for a slight amount of slack in the middle
   if ( abs(pitch - 64) < 2 ) pitch = 64;
   mBend = map(pitch, 0, MAX_PITCH_MIDI_VALUE, -ANALOG_HALF_BEND, ANALOG_HALF_BEND) ;
   if ( ! mNotes.empty() ) mMIDIDirty = true;
 }
+
+#endif

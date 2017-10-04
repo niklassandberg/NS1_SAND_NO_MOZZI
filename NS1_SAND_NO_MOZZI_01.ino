@@ -16,6 +16,8 @@
 // -------------------- can be changed -----------------------------
 // -----------------------------------------------------------------
 
+#define NOTES_BUFFER 127
+
 #define MIN_NOTE 36
 #define MAX_NOTE MIN_NOTE+61
 
@@ -70,7 +72,7 @@ Mode<4> gKeyMode(KNOB_2_PIN,mode::singleKey);
 void outputNotes();
 
 Pots gPots;
-ToneHandler gNotes(NOTES_BUFFER, PITCH_RANGE, MIN_NOTE, MAX_NOTE);
+ToneHandler<NOTES_BUFFER, MIN_NOTE, MAX_NOTE> gNotes(PITCH_RANGE);
 
 AnalogPin gGlidePin(KNOB_1_PIN, pin::glideFactor);
 TogglePin gHoldPin(BUTTON_1_PIN,pin::keysHold,100);
@@ -86,8 +88,6 @@ BoMidiFilter<1, MIDITYPE::CC, midi::changedMod, controlBetween<1,1> >
 > gMidi;
 
 DAC_MCP49xx gDAC(DAC_MCP49xx::MCP4922, NS1_DAC_SS, -1);
-
-//Callbacks.
 
 void mode::singleKey()
 {
