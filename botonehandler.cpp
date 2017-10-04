@@ -117,7 +117,7 @@ void ToneHandler::addNote(uint8_t midiNote)
 
 void ToneHandler::removeNote(uint8_t midiNote)
 {
-  if(mHold) return;
+  //if(mHold) return;
   removeMidiNote( midiNote );
   setOverlap();
 }

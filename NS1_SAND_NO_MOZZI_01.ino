@@ -85,7 +85,9 @@ BoMidiFilter<1, MIDITYPE::CC, midi::changedCC, controlBetween<MIN_CC, MAX_CC> >,
 BoMidiFilter<1, MIDITYPE::CC, midi::changedMod, controlBetween<1,1> >
 > gMidi;
 
-DAC_MCP49xx dac(DAC_MCP49xx::MCP4922, NS1_DAC_SS, -1);
+DAC_MCP49xx gDAC(DAC_MCP49xx::MCP4922, NS1_DAC_SS, -1);
+
+//Callbacks.
 
 void mode::singleKey()
 {
@@ -133,7 +135,8 @@ void pin::keysHold(bool state)
 
 void midi::noteon(uint8_t note, uint8_t velocity)
 {
-  gNotes.addNote(note);
+  if(velocity) gNotes.addNote(note);
+  else gNotes.removeNote(note);
 }
 void midi::noteoff(uint8_t note, uint8_t velocity)
 {
@@ -147,8 +150,8 @@ void midi::pitch(uint8_t lsb, uint8_t msb)
 
 void midi::changedMod(uint8_t cc, uint8_t value)
 {
-  if (value <= 3) dac.outputB(0);
-  else dac.outputB(value * 32);
+  if (value <= 3) gDAC.outputB(0);
+  else gDAC.outputB(value * 32);
 }
 
 void midi::changedCC(uint8_t cc, uint8_t value)
@@ -163,7 +166,7 @@ void outputNotes()
   if ( ! gateOn ) return;
   uint16_t tone = gNotes.currentTone();
   if (tone > DAC_MAX_VALUE) tone = DAC_MAX_VALUE;
-  dac.outputA( tone );
+  gDAC.outputA( tone );
 }
 
 void modesSetup()
@@ -188,7 +191,7 @@ void setup() {
   Wire.begin();
   potsSetup();
   modesSetup();
-  dac.setGain(2);
+  gDAC.setGain(2);
   randomSeed(0);
   
   pinMode( TRIGGER_PIN, OUTPUT );
