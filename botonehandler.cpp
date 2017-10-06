@@ -114,7 +114,7 @@ template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::gateOn()
 {
   if (mAllpegiatorOn)
-    return ! mNotes.empty() && mGateState == IS_HIGH;
+    return ! mNotes.empty() && mGateState == IS_HIGH && mGateChanged;
   else
     return ! mNotes.empty();
 }
