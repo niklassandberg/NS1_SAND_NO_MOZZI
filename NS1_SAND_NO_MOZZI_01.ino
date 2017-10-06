@@ -148,6 +148,7 @@ void midi::pitch(uint8_t lsb, uint8_t msb)
   gNotes.addPitch(fullValue);
 }
 
+
 void midi::changedMod(uint8_t cc, uint8_t value)
 {
   if (value <= 3) gDAC.outputB(0);
@@ -161,6 +162,7 @@ void midi::changedCC(uint8_t cc, uint8_t value)
 
 void outputNotes()
 {
+  //TODO: this makes 
   bool gateOn = gNotes.gateOn();
   digitalWrite( TRIGGER_PIN, (gateOn) ? HIGH : LOW );
   if ( ! gateOn ) return;

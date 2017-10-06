@@ -21,8 +21,7 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap(uint8_t noteIndex)
   //halts the slide if mNotes has one note.
   if (mNotes.size())
   {
-    //TODO: cannot put const in template arguments. Why?!
-    mNextTone = midikeyToDac<36,97,DAC_SEMI_TONE,MAX_DAC_KEY>( mNotes[noteIndex] );
+    mNextTone = midikeyToDac<MINNOTE,MAXNOTE,DAC_SEMI_TONE,MAX_DAC_KEY>( mNotes[noteIndex] );
   }
 
   if (mNotes.size() && ! (mCurrentTone > MAX_DAC_KEY) )
@@ -50,18 +49,22 @@ ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::ToneHandler(uint8_t pitchRange) :
   mBend(0) ,
   mCurrentTone(0) ,
   mNoteOverlap(false) ,
-  mNoteIndex(0),
-  mKeyMode(NORMAL),
-  mAllpegiatorOn(false),
-  mGateState(IS_LOW),
-  mGateChanged(false)
+  mNoteIndex(0) ,
+  mKeyMode(NORMAL) ,
+  mAllpegiatorOn(false) ,
+  mGateState(IS_LOW) ,
+  mGateChanged(false) ,
+
+  mGlideFactor(0) ,
+  mNextTone(0) ,
+  mHold(false)
 {}
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
-void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
+bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
 {
-  if( ! mAllpegiatorOn ) return;
-  else if ( mGateState == IS_LOW || ! mGateChanged ) return;
+  if( ! mAllpegiatorOn ) return false;
+  else if ( mGateState == IS_LOW || ! mGateChanged ) return false;
 
   if ( mNotes.size() > 1 )
   {
@@ -72,9 +75,9 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
         break;
       case ALLPEG_UPDOWN :
         static bool up = true;
-        if (up) up = ++mNoteIndex < mNotes.size() - 1;
-        else up = --mNoteIndex == 0;
-        mNoteIndex = (mNoteIndex) % mNotes.size();
+        if (up) up = mNoteIndex+1 < mNotes.size();
+        else up = mNoteIndex == 0;
+        (up) ? ++mNoteIndex : --mNoteIndex;
         break;
       default:
         mNoteIndex = (mNoteIndex + 1) % mNotes.size();
@@ -88,8 +91,9 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
 
   setOverlap(mNoteIndex);
   mMIDIDirty = true;
+  
+  return true;
 }
-
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::update()
@@ -109,7 +113,6 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::utdated()
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::gateOn()
 {
-  //Serial.print("gateOn:"); Serial.println(mNotes.empty());
   if (mAllpegiatorOn)
     return ! mNotes.empty() && mGateState == IS_HIGH;
   else

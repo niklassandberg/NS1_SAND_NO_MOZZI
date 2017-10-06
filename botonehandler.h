@@ -1,10 +1,17 @@
 #ifndef _TONE_HANDLER_H_
 #define _TONE_HANDLER_H_
 
+#include <bofilters.h>
+
+#ifdef MOCK_ARDUINO
+#include <arduinomock.h>
+#else
 #include <Arduino.h>
+#endif
+
+
 #include <boarraycontainer.h>
 
-#include <bofilters.h>
 
 // ------------------- FIXED CONSTANTS ---------------------------
 // -- !!! DO NOT CHANGE IF YOU DONT KNOW WHAT YOU ARE DOING !!! --
@@ -36,29 +43,35 @@ enum GateState
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 class ToneHandler
 {
-  bool mAllpegiatorOn;
-  KeyMode mKeyMode;
+    const int16_t ANALOG_HALF_BEND;
+    
+    //indicates that midi has changed the tone.
+    bool mMIDIDirty;
+    
+    //pitch value for dac.
+    int16_t mBend;
 
-  bool mGateChanged;
-  GateState mGateState;
+    uint16_t mCurrentTone;
+    bool mNoteOverlap;
+    size_t mNoteIndex;
+    
+    KeyMode mKeyMode;
+    
+    bool mAllpegiatorOn;
+  
+    GateState mGateState;
+    
+    bool mGateChanged;
 
     uint16_t mGlideFactor;
   
-    const int16_t ANALOG_HALF_BEND;
 
-    uint16_t mCurrentTone;
     uint16_t mNextTone;
-    bool mNoteOverlap;
 
     bool mHold;
 
-    size_t mNoteIndex;
     //notes beging pressed down.
     array_container<uint8_t, NOTESBUFFER> mNotes;
-    //indicates that midi has changed the tone.
-    bool mMIDIDirty;
-    //pitch value for dac.
-    int16_t mBend;
 
     void removeMidiNote(uint8_t note);
     void setOverlap(uint8_t noteIndex);
@@ -83,7 +96,7 @@ uint16_t midiToDacVal(uint8_t midiVal)
     void removeNote(uint8_t midiNote);
     
     //Todo: this two needs to be merge and . Same func call, 
-    void allpegiator();
+    bool allpegiator();
     void allpegiatorOn() { mAllpegiatorOn = true; }
     void allpegiatorOff() { mAllpegiatorOn = false; }
     uint16_t currentTone();
