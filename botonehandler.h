@@ -43,6 +43,7 @@ enum GateState
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 class ToneHandler
 {
+  
     const int16_t ANALOG_HALF_BEND;
     
     //indicates that midi has changed the tone.
@@ -76,14 +77,6 @@ class ToneHandler
     void removeMidiNote(uint8_t note);
     void setOverlap(uint8_t noteIndex);
     void setOverlap();
-
-uint16_t midiToDacVal(uint8_t midiVal)
-{
-  if( midiVal > MAXNOTE ) return MAX_DAC_KEY;
-  uint16_t dacVal = (midiVal - MINNOTE) * DAC_SEMI_TONE;
-  dacVal += (2 & midiVal) ? 1 : 0; //correlate dac semitones based on analyse.
-  return dacVal;
-}
 
   public:
   
