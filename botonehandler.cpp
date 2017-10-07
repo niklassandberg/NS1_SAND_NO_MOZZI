@@ -33,6 +33,7 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap(uint8_t noteIndex)
     mCurrentTone = MAX_DAC_KEY + 1;
     mNoteOverlap = false;
   }
+  
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
