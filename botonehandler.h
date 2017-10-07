@@ -77,6 +77,14 @@ class ToneHandler
     void setOverlap(uint8_t noteIndex);
     void setOverlap();
 
+uint16_t midiToDacVal(uint8_t midiVal)
+{
+  if( midiVal > MAXNOTE ) return MAX_DAC_KEY;
+  uint16_t dacVal = (midiVal - MINNOTE) * DAC_SEMI_TONE;
+  dacVal += (2 & midiVal) ? 1 : 0; //correlate dac semitones based on analyse.
+  return dacVal;
+}
+
   public:
   
     ToneHandler(uint8_t pitchRange);
