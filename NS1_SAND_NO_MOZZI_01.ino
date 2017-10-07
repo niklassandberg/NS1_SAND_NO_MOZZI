@@ -210,7 +210,7 @@ void updateNS1()
   gMidi.ifMidiDo();
   
   if ( ! gNotes.update() ) return;
-  
+
   gNotes.allpegiator();
   gNotes.normal();
   
