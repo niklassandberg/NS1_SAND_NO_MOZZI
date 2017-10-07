@@ -17,6 +17,8 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeMidiNote(uint8_t note)
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap(uint8_t noteIndex)
 {
+  Serial.println("setOverlap(uint8_t noteIndex)");
+  
   //Setting mCurrentTone = MAX_DAC_KEY_MIDI_MAP_VAL+1;
   //halts the slide if mNotes has one note.
   if (mNotes.size())
@@ -64,33 +66,31 @@ template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
 {
   if( ! mAllpegiatorOn ) return false;
-  else if ( mGateState == IS_LOW || ! mGateChanged ) return false;
+  if ( !(mGateState == IS_HIGH && mGateChanged) ) return false;
 
-  if ( mNotes.size() > 1 )
-  {
-    switch (mKeyMode)
-    {
-      case ALLPEG_RANDOM :
-        mNoteIndex = random(mNotes.size());
-        break;
-      case ALLPEG_UPDOWN :
-        static bool up = true;
-        if (up) up = mNoteIndex+1 < mNotes.size();
-        else up = mNoteIndex == 0;
-        (up) ? ++mNoteIndex : --mNoteIndex;
-        break;
-      default:
-        mNoteIndex = (mNoteIndex + 1) % mNotes.size();
-        break;
-    }
-  }
-  else
-  {
-    mNoteIndex = 0;
-  }
-
-  setOverlap(mNoteIndex);
   mMIDIDirty = true;
+  
+  if( mNotes.size() == 0 ) return false;
+  
+  Serial.println("allpegiator()");
+  
+  switch (mKeyMode)
+  {
+    case ALLPEG_RANDOM :
+      mNoteIndex = random(mNotes.size());
+      break;
+    case ALLPEG_UPDOWN :
+      static bool up = true;
+      if (up) up = mNoteIndex+1 < mNotes.size();
+      else up = mNoteIndex == 0;
+      (up) ? ++mNoteIndex : --mNoteIndex;
+      break;
+    default:
+      mNoteIndex = (mNoteIndex + 1) % mNotes.size();
+      break;
+  }
+  
+  setOverlap(mNoteIndex);
   
   return true;
 }
@@ -114,7 +114,7 @@ template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::gateOn()
 {
   if (mAllpegiatorOn)
-    return ! mNotes.empty() && mGateState == IS_HIGH && mGateChanged;
+    return ! mNotes.empty() && mGateState == IS_HIGH;
   else
     return ! mNotes.empty();
 }
@@ -126,7 +126,6 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::addNote(uint8_t midiNote)
   if(!mHold) removeMidiNote(midiNote);
   mNotes.push_back(midiNote);
   mMIDIDirty = true;
-  setOverlap();
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
@@ -134,7 +133,6 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeNote(uint8_t midiNote)
 {
   //if(mHold) return;
   removeMidiNote( midiNote );
-  setOverlap();
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>

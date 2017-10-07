@@ -97,6 +97,8 @@ uint16_t midiToDacVal(uint8_t midiVal)
     
     //Todo: this two needs to be merge and . Same func call, 
     bool allpegiator();
+    bool normal() { if(!mAllpegiatorOn) setOverlap(); }
+    
     void allpegiatorOn() { mAllpegiatorOn = true; }
     void allpegiatorOff() { mAllpegiatorOn = false; }
     uint16_t currentTone();

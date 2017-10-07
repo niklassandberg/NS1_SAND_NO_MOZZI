@@ -188,6 +188,8 @@ void potsSetup()
 }
 
 void setup() {
+  Serial.begin(9600);
+  
   Timer1.initialize(8000);
   Timer1.attachInterrupt(updateNS1);
   Wire.begin();
@@ -211,6 +213,8 @@ void updateNS1()
   if ( ! gNotes.update() ) return;
   
   gNotes.allpegiator();
+  gNotes.normal();
+  
   outputNotes();
   gNotes.utdated();
 }
