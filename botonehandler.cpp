@@ -17,8 +17,6 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeMidiNote(uint8_t note)
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap(uint8_t noteIndex)
 {
-  Serial.println("setOverlap(uint8_t noteIndex)");
-  
   //Setting mCurrentTone = MAX_DAC_KEY_MIDI_MAP_VAL+1;
   //halts the slide if mNotes has one note.
   if (mNotes.size())
@@ -71,8 +69,6 @@ bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
   mMIDIDirty = true;
   
   if( mNotes.size() == 0 ) return false;
-  
-  Serial.println("allpegiator()");
   
   switch (mKeyMode)
   {

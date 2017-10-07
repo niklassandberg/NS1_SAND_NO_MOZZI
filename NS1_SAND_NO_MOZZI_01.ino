@@ -187,9 +187,8 @@ void potsSetup()
   gPots.setup(ccs);
 }
 
-void setup() {
-  Serial.begin(9600);
-  
+void setup()
+{
   Timer1.initialize(8000);
   Timer1.attachInterrupt(updateNS1);
   Wire.begin();
