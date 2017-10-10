@@ -33,7 +33,6 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap(uint8_t noteIndex)
     mCurrentTone = MAX_DAC_KEY + 1;
     mNoteOverlap = false;
   }
-  
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
@@ -53,7 +52,7 @@ ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::ToneHandler(uint8_t pitchRange) :
   mNoteIndex(0) ,
   mKeyMode(NORMAL) ,
   mAllpegiatorOn(false) ,
-  mGateState(IS_LOW) ,
+  mTrigState(IS_LOW) ,
   mGateChanged(false) ,
 
   mGlideFactor(0) ,
@@ -65,7 +64,7 @@ template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
 {
   if( ! mAllpegiatorOn ) return false;
-  if ( !(mGateState == IS_HIGH && mGateChanged) ) return false;
+  if ( !(mTrigState == IS_HIGH && mGateChanged) ) return false;
 
   mMIDIDirty = true;
   
@@ -111,7 +110,7 @@ template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::gateOn()
 {
   if (mAllpegiatorOn)
-    return ! mNotes.empty() && mGateState == IS_HIGH;
+    return ! mNotes.empty() && mTrigState == IS_HIGH;
   else
     return ! mNotes.empty();
 }
@@ -136,7 +135,7 @@ template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 uint16_t ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::currentTone()
 {
   if(mNoteOverlap)
-    keyGlide2(mNextTone, mCurrentTone, mGlideFactor);
+    toneSlide(mNextTone, mCurrentTone, mGlideFactor >> 3);
   else
     mCurrentTone = mNextTone;
   return (uint16_t) mCurrentTone + mBend;

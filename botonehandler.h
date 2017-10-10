@@ -34,7 +34,7 @@ enum KeyMode {
   ALLPEG_RANDOM
 };
 
-enum GateState
+enum TrigState
 {
   IS_HIGH,
   IS_LOW
@@ -43,7 +43,7 @@ enum GateState
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 class ToneHandler
 {
-  
+
     const int16_t ANALOG_HALF_BEND;
     
     //indicates that midi has changed the tone.
@@ -52,7 +52,7 @@ class ToneHandler
     //pitch value for dac.
     int16_t mBend;
 
-    uint16_t mCurrentTone;
+    int16_t mCurrentTone;
     bool mNoteOverlap;
     size_t mNoteIndex;
     
@@ -60,14 +60,14 @@ class ToneHandler
     
     bool mAllpegiatorOn;
   
-    GateState mGateState;
+    TrigState mTrigState;
     
     bool mGateChanged;
 
     uint16_t mGlideFactor;
   
 
-    uint16_t mNextTone;
+    int16_t mNextTone;
 
     bool mHold;
 
@@ -96,8 +96,8 @@ class ToneHandler
     void allpegiatorOff() { mAllpegiatorOn = false; }
     uint16_t currentTone();
 
-    void gate( GateState state ) { mGateState = state; }
-    void gate( bool changed) { mGateChanged = changed; }
+    void trig( TrigState state ) { mTrigState = state; }
+    void trig( bool changed) { mGateChanged = changed; }
 
     void mode(KeyMode keyMode) { mKeyMode = keyMode; }
     

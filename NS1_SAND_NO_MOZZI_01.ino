@@ -12,9 +12,7 @@
 
 #define NS1_DAC_SS 4
 
-// ------------------- PROJECT CONSTANTS ---------------------------
-// -------------------- can be changed -----------------------------
-// -----------------------------------------------------------------
+// ------------------- VAR CONSTANTS ---------------------------
 
 #define NOTES_BUFFER 127
 
@@ -33,43 +31,10 @@
 #define KNOB_1_PIN A1
 #define KNOB_2_PIN A2
 
-
-
 #include "botonehandler.h"
-
-// -----------------------------------------------------------------
-// --------------------- IMPL --------------------------------------
-// -----------------------------------------------------------------
-
-namespace midi
-{
-  void noteon(uint8_t note, uint8_t velocity);
-  void noteoff(uint8_t note, uint8_t velocity);
-  void pitch(uint8_t lsb, uint8_t msb);
-  void changedMod(uint8_t cc, uint8_t value);
-  void changedCC(uint8_t cc, uint8_t value);
-};
-
-namespace gate {
-  void changed(bool high);
-  void notChanged();
-};
-
-namespace mode {
-  void singleKey();
-  void allpegiatorNormal();
-  void allpegiatorRandom();
-  void allpegiatorUpDown();
-};
-
-namespace pin {
-void glideFactor(uint16_t factor);
-void keysHold(bool state);
-};
+#include "callbacks.h"
 
 Mode<4> gKeyMode(KNOB_2_PIN,mode::singleKey);
-
-void outputNotes();
 
 Pots gPots;
 ToneHandler<NOTES_BUFFER, MIN_NOTE, MAX_NOTE> gNotes(PITCH_RANGE);
@@ -77,7 +42,7 @@ ToneHandler<NOTES_BUFFER, MIN_NOTE, MAX_NOTE> gNotes(PITCH_RANGE);
 AnalogPin gGlidePin(KNOB_1_PIN, pin::glideFactor);
 TogglePin gHoldPin(BUTTON_1_PIN,pin::keysHold,100);
 
-DigitalGate mClockTrig(CLICK_TRIG, gate::changed, gate::notChanged);
+DigitalGate mClockTrig(CLICK_TRIG, sync::changed, sync::notChanged);
 
 BoMidi <
 BoMidiFilter<1, MIDITYPE::NOTEON, midi::noteon, keyBetween<MIN_NOTE,MAX_NOTE> > ,
@@ -110,16 +75,16 @@ void mode::allpegiatorUpDown()
   gNotes.allpegiatorOn();
 }
 
-void gate::changed(bool high)
+void sync::changed(bool high)
 {
-  if(high) gNotes.gate(IS_HIGH);
-  else gNotes.gate(IS_LOW);
-  gNotes.gate(true);
+  if(high) gNotes.trig(IS_HIGH);
+  else gNotes.trig(IS_LOW);
+  gNotes.trig(true);
 }
 
-void gate::notChanged()
+void sync::notChanged()
 {
-  gNotes.gate(false);
+  gNotes.trig(false);
 }
 
 void pin::glideFactor(uint16_t factor)
@@ -144,7 +109,7 @@ void midi::noteoff(uint8_t note, uint8_t velocity)
 }
 void midi::pitch(uint8_t lsb, uint8_t msb)
 {
-  uint16_t fullValue = (((uint16_t)msb) << 7) + lsb;
+  uint16_t fullValue = (((uint16_t)msb) << 7) | lsb;
   gNotes.addPitch(fullValue);
 }
 
@@ -207,7 +172,7 @@ void updateNS1()
   gKeyMode();
   gGlidePin();
   gHoldPin();
-  gMidi.ifMidiDo();
+  gMidi.whileMidiDo();
   
   if ( ! gNotes.update() ) return;
   
