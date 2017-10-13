@@ -14,7 +14,6 @@
 #include "botonehandler.h"
 #include "callbacks.h"
 
-
 //------------------------------------------------------------------------
 //------------------------------ DEFINES ---------------------------------
 //------------------------------------------------------------------------
@@ -171,17 +170,6 @@ void setup()
   DEBUG_START(9600);
 }
 
-void outputNotes()
-{
-  //TODO: this makes 
-  bool gateOn = gNotes.gateOn();
-  digitalWrite( TRIGGER_PIN, (gateOn) ? HIGH : LOW );
-  //if ( ! gateOn ) return;
-  uint16_t tone = gNotes.currentTone();
-  if (tone > DAC_MAX_VALUE) tone = DAC_MAX_VALUE;
-  gDAC.outputA( tone );
-}
-
 void updateNS1()
 {
   //Exec update.
@@ -192,7 +180,12 @@ void updateNS1()
   gMidi.whileMidiDo();
 
   if ( ! gNotes.allpegiator() && ! gNotes.normal() ) return;
-  outputNotes();
+
+  digitalWrite( TRIGGER_PIN, (gNotes.gateOn()) ? HIGH : LOW );
+  uint16_t tone = gNotes.currentTone();
+  if (tone > DAC_MAX_VALUE) tone = DAC_MAX_VALUE;
+  gDAC.outputA( tone );
+
   gNotes.utdated();
 }
 

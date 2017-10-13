@@ -1,17 +1,3 @@
-#ifndef _TONE_HANDLER_H_
-#define _TONE_HANDLER_H_
-
-#include <bofilters.h>
-
-#ifdef MOCK_ARDUINO
-#include <arduinomock.h>
-#else
-#include <Arduino.h>
-#endif
-
-
-#include <boarraycontainer.h>
-
 
 // ------------------- FIXED CONSTANTS ---------------------------
 // -- !!! DO NOT CHANGE IF YOU DONT KNOW WHAT YOU ARE DOING !!! --
@@ -30,6 +16,24 @@
 //FIRST_NOTE_INDEX indicates that new tone is pressed.
 //By that no slide of 'keyOverlap'
 #define FIRST_NOTE_INDEX 255
+
+
+
+
+
+#ifndef _TONE_HANDLER_H_
+#define _TONE_HANDLER_H_
+
+#include <bofilters.h>
+
+#ifdef MOCK_ARDUINO
+#include <arduinomock.h>
+#else
+#include <Arduino.h>
+#endif
+
+
+#include <boarraycontainer.h>
 
 enum KeyMode {
   NORMAL,

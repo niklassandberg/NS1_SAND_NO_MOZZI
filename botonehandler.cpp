@@ -83,31 +83,27 @@ template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::normal()
 {
   if( mAllpegiatorOn )
-    return true;
+    return false;
   
   if (mMIDIDirty) //new key.
   {
     setOverlap();
     return true;
   }
-  else if(mNoteOverlap) //multiple notes pressed
+  else if(mNoteOverlap)
   {
+    //multiple notes pressed, can need updates.
     return true;
   }
-  return true;
+  return false;
 }
-/*
-if (mAllpegiatorOn)
-    return mTrigChanged || mNoteOverlap;
-  else
-    return mMIDIDirty || mNoteOverlap;
-*/
+
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
 {
   if( ! mAllpegiatorOn ) 
   {
-    DEBUG(ALLPEGIATOR,"allpeg: is on");
+    DEBUG(ALLPEGIATOR,"allpeg: is off");
     return false; //not on
   }
   else if( !mNotes.size() )
