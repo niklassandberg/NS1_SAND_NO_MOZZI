@@ -27,6 +27,10 @@
 // DAC_SEMI_TONE
 #define DAC_SEMI_TONE 68
 
+//FIRST_NOTE_INDEX indicates that new tone is pressed.
+//By that no slide of 'keyOverlap'
+#define FIRST_NOTE_INDEX 255
+
 enum KeyMode {
   NORMAL,
   ALLPEG_UP,
@@ -62,9 +66,9 @@ class ToneHandler
   
     TrigState mTrigState;
     
-    bool mGateChanged;
+    bool mTrigChanged;
 
-    uint16_t mGlideFactor;
+    uint8_t mSlideFactor;
   
 
     int16_t mNextTone;
@@ -82,7 +86,6 @@ class ToneHandler
   
     ToneHandler(uint8_t pitchRange);
 
-    bool update();
     void utdated();
     bool gateOn();
     void addNote(uint8_t midiNote);
@@ -90,20 +93,23 @@ class ToneHandler
     
     //Todo: this two needs to be merge and . Same func call, 
     bool allpegiator();
-    bool normal() { if(!mAllpegiatorOn) setOverlap(); }
+    bool normal();
     
     void allpegiatorOn() { mAllpegiatorOn = true; }
     void allpegiatorOff() { mAllpegiatorOn = false; }
     uint16_t currentTone();
 
     void trig( TrigState state ) { mTrigState = state; }
-    void trig( bool changed) { mGateChanged = changed; }
+    void trig( bool changed) { mTrigChanged = changed; }
 
     void mode(KeyMode keyMode) { mKeyMode = keyMode; }
     
     void addPitch(uint16_t pitch); // pitch bend is +/- ANALOG_HALF_BEND semitones
 
-    void glide(uint16_t factor) { mGlideFactor = factor; }
+    void slide(uint8_t factor) {
+      factor <<= 1;
+      mSlideFactor = ~factor; // 0-127 => 255-0
+    }
 
     void hold(bool state) {
       mHold = state;

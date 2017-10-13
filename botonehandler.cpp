@@ -3,6 +3,8 @@
 
 #include "botonehandler.h"
 
+#include <bodebug.h>
+
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeMidiNote(uint8_t note)
 {
@@ -10,36 +12,53 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeMidiNote(uint8_t note)
   if ( index != mNotes.index_end() )
   {
     mNotes.remove_at(index);
-    mMIDIDirty = true;
   }
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap(uint8_t noteIndex)
 {
-  //Setting mCurrentTone = MAX_DAC_KEY_MIDI_MAP_VAL+1;
-  //halts the slide if mNotes has one note.
-  if (mNotes.size())
+
+  DEBUG_2(SETOVERLAP,"setOverlap: ",noteIndex);
+  
+  if(mNoteIndex == noteIndex)
   {
-    mNextTone = midikeyToDac<MINNOTE,MAXNOTE,DAC_SEMI_TONE,MAX_DAC_KEY>( mNotes[noteIndex] );
+    DEBUG(SETOVERLAP,"is already set.");
+    return;
+  }
+  else if(noteIndex > MAXNOTE)
+  {
+    DEBUG(SETOVERLAP,"empty note was playing");
+    //MAXNOTE < mNoteIndex indicates first time played.
+    mNoteIndex = noteIndex;
+    mNoteOverlap = false;
+    return; 
   }
 
-  if (mNotes.size() && ! (mCurrentTone > MAX_DAC_KEY) )
+
+  DEBUG(SETOVERLAP,"Get next tone");
+  mNoteIndex = noteIndex;
+  mNextTone = midikeyToDac<MINNOTE,MAXNOTE,DAC_SEMI_TONE,MAX_DAC_KEY>( mNotes[noteIndex] );
+
+
+  //if: First time played new note. Have no slide.
+  if(mNoteIndex > MAXNOTE)
   {
-    mNoteOverlap = mCurrentTone != mNextTone;
+    DEBUG(SETOVERLAP,"First time played");
+    mNoteOverlap = false;
   }
   else
   {
-    mCurrentTone = MAX_DAC_KEY + 1;
-    mNoteOverlap = false;
+    DEBUG(SETOVERLAP,"set note overlap");
+    mNoteOverlap = mCurrentTone != mNextTone;
   }
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::setOverlap()
 {
-  mNoteIndex = mNotes.size() - 1;
-  setOverlap(mNoteIndex);
+  if(!mNotes.size()) setOverlap(FIRST_NOTE_INDEX);
+  else setOverlap(mNotes.size()-1);
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
@@ -49,55 +68,83 @@ ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::ToneHandler(uint8_t pitchRange) :
   mBend(0) ,
   mCurrentTone(0) ,
   mNoteOverlap(false) ,
-  mNoteIndex(0) ,
+  mNoteIndex(FIRST_NOTE_INDEX) ,
   mKeyMode(NORMAL) ,
   mAllpegiatorOn(false) ,
   mTrigState(IS_LOW) ,
-  mGateChanged(false) ,
+  mTrigChanged(false) ,
 
-  mGlideFactor(0) ,
+  mSlideFactor(0) ,
   mNextTone(0) ,
   mHold(false)
 {}
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
+bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::normal()
+{
+  if( mAllpegiatorOn )
+    return true;
+  
+  if (mMIDIDirty) //new key.
+  {
+    setOverlap();
+    return true;
+  }
+  else if(mNoteOverlap) //multiple notes pressed
+  {
+    return true;
+  }
+  return true;
+}
+/*
+if (mAllpegiatorOn)
+    return mTrigChanged || mNoteOverlap;
+  else
+    return mMIDIDirty || mNoteOverlap;
+*/
+template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::allpegiator()
 {
-  if( ! mAllpegiatorOn ) return false;
-  if ( !(mTrigState == IS_HIGH && mGateChanged) ) return false;
+  if( ! mAllpegiatorOn ) 
+  {
+    DEBUG(ALLPEGIATOR,"allpeg: is on");
+    return false; //not on
+  }
+  else if( !mNotes.size() )
+  {
+    if(mMIDIDirty) setOverlap(FIRST_NOTE_INDEX);
+    DEBUG(ALLPEGIATOR,"allpeg: notes not pressed.");
+    return false;
+  }
+  else if ( !(mTrigState == IS_HIGH && mTrigChanged) )
+  {
+    DEBUG(ALLPEGIATOR,"allpeg: not triggered.");
+    return false;
+  }
 
   mMIDIDirty = true;
   
-  if( mNotes.size() == 0 ) return false;
-  
+  size_t noteIndex = mNoteIndex;
   switch (mKeyMode)
   {
     case ALLPEG_RANDOM :
-      mNoteIndex = random(mNotes.size());
+      noteIndex = random(mNotes.size());
       break;
     case ALLPEG_UPDOWN :
       static bool up = true;
-      if (up) up = mNoteIndex+1 < mNotes.size();
-      else up = mNoteIndex == 0;
-      (up) ? ++mNoteIndex : --mNoteIndex;
+      if (up) up = noteIndex+1 < mNotes.size();
+      else up = noteIndex == 0;
+      (up) ? ++noteIndex : --noteIndex;
       break;
     default:
-      mNoteIndex = (mNoteIndex + 1) % mNotes.size();
+      noteIndex = (noteIndex + 1) % mNotes.size();
       break;
   }
   
-  setOverlap(mNoteIndex);
+  DEBUG_2(ALLPEGIATOR,"allpeg noteIndex: ",noteIndex);
+  setOverlap(noteIndex);
   
   return true;
-}
-
-template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
-bool ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::update()
-{
-  if (mAllpegiatorOn)
-    return mGateChanged || mNoteOverlap;
-  else
-    return mMIDIDirty || mNoteOverlap;
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
@@ -127,15 +174,19 @@ void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::addNote(uint8_t midiNote)
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 void ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::removeNote(uint8_t midiNote)
 {
-  //if(mHold) return;
   removeMidiNote( midiNote );
+  mMIDIDirty = true;
 }
 
 template<uint8_t NOTESBUFFER, uint8_t MINNOTE, uint8_t MAXNOTE>
 uint16_t ToneHandler<NOTESBUFFER,MINNOTE,MAXNOTE>::currentTone()
 {
   if(mNoteOverlap)
-    toneSlide(mNextTone, mCurrentTone, mGlideFactor >> 3);
+  {
+    mNoteOverlap = mCurrentTone != mNextTone;
+    toneSlide(mNextTone, mCurrentTone, mSlideFactor);
+    DEBUG_2(CURRENT_TONE,"toneSlide: ",mNoteOverlap);
+  }
   else
     mCurrentTone = mNextTone;
   return (uint16_t) mCurrentTone + mBend;

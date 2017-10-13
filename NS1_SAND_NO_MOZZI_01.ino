@@ -9,10 +9,17 @@
 #include <bofilters.h>
 #include <botogglepin.h>
 #include <bopins.h>
+#include <bodebug.h>
 
-#define NS1_DAC_SS 4
+#include "botonehandler.h"
+#include "callbacks.h"
 
-// ------------------- VAR CONSTANTS ---------------------------
+
+//------------------------------------------------------------------------
+//------------------------------ DEFINES ---------------------------------
+//------------------------------------------------------------------------
+
+#define NS1_DAC_SS 4 //DO NOT TOUCH!!
 
 #define NOTES_BUFFER 127
 
@@ -31,15 +38,17 @@
 #define KNOB_1_PIN A1
 #define KNOB_2_PIN A2
 
-#include "botonehandler.h"
-#include "callbacks.h"
+//------------------------------------------------------------------------
+//------------------------------ GLOBALS ---------------------------------
+//------------------------------------------------------------------------
+
 
 Mode<4> gKeyMode(KNOB_2_PIN,mode::singleKey);
 
 Pots gPots;
 ToneHandler<NOTES_BUFFER, MIN_NOTE, MAX_NOTE> gNotes(PITCH_RANGE);
 
-AnalogPin gGlidePin(KNOB_1_PIN, pin::glideFactor);
+AnalogPin gSlidePin(KNOB_1_PIN, pin::slideFactor);
 TogglePin gHoldPin(BUTTON_1_PIN,pin::keysHold,100);
 
 DigitalGate mClockTrig(CLICK_TRIG, sync::changed, sync::notChanged);
@@ -49,10 +58,15 @@ BoMidiFilter<1, MIDITYPE::NOTEON, midi::noteon, keyBetween<MIN_NOTE,MAX_NOTE> > 
 BoMidiFilter<1, MIDITYPE::NOTEOFF, midi::noteoff, keyBetween<MIN_NOTE,MAX_NOTE> > ,
 BoMidiFilter<1, MIDITYPE::PB, midi::pitch > ,
 BoMidiFilter<1, MIDITYPE::CC, midi::changedCC, controlBetween<MIN_CC, MAX_CC> >,
+//BoMidiFilter<1, MIDITYPE::CC, midi::changedMod, controlIs<1,1> >,
 BoMidiFilter<1, MIDITYPE::CC, midi::changedMod, controlBetween<1,1> >
 > gMidi;
 
 DAC_MCP49xx gDAC(DAC_MCP49xx::MCP4922, NS1_DAC_SS, -1);
+
+//------------------------------------------------------------------------
+//------------------------ CAllBACK DEFINITIONS --------------------------
+//------------------------------------------------------------------------
 
 void mode::singleKey()
 {
@@ -87,9 +101,9 @@ void sync::notChanged()
   gNotes.trig(false);
 }
 
-void pin::glideFactor(uint16_t factor)
+void pin::slideFactor(uint16_t factor)
 {
-  gNotes.glide(factor);
+  gNotes.slide(factor>>3); //0-127
 }
 
 void pin::keysHold(bool state)
@@ -125,17 +139,6 @@ void midi::changedCC(uint8_t cc, uint8_t value)
   gPots.read(cc, value);
 }
 
-void outputNotes()
-{
-  //TODO: this makes 
-  bool gateOn = gNotes.gateOn();
-  digitalWrite( TRIGGER_PIN, (gateOn) ? HIGH : LOW );
-  if ( ! gateOn ) return;
-  uint16_t tone = gNotes.currentTone();
-  if (tone > DAC_MAX_VALUE) tone = DAC_MAX_VALUE;
-  gDAC.outputA( tone );
-}
-
 void modesSetup()
 {
   gKeyMode[0] = mode::singleKey;
@@ -164,21 +167,31 @@ void setup()
   
   pinMode( TRIGGER_PIN, OUTPUT );
   digitalWrite( TRIGGER_PIN, LOW );
+
+  DEBUG_START(9600);
+}
+
+void outputNotes()
+{
+  //TODO: this makes 
+  bool gateOn = gNotes.gateOn();
+  digitalWrite( TRIGGER_PIN, (gateOn) ? HIGH : LOW );
+  //if ( ! gateOn ) return;
+  uint16_t tone = gNotes.currentTone();
+  if (tone > DAC_MAX_VALUE) tone = DAC_MAX_VALUE;
+  gDAC.outputA( tone );
 }
 
 void updateNS1()
 {
+  //Exec update.
   mClockTrig();
   gKeyMode();
-  gGlidePin();
+  gSlidePin();
   gHoldPin();
   gMidi.whileMidiDo();
-  
-  if ( ! gNotes.update() ) return;
-  
-  gNotes.allpegiator();
-  gNotes.normal();
-  
+
+  if ( ! gNotes.allpegiator() && ! gNotes.normal() ) return;
   outputNotes();
   gNotes.utdated();
 }

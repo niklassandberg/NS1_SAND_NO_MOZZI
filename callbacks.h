@@ -23,7 +23,7 @@ namespace mode {
 };
 
 namespace pin {
-void glideFactor(uint16_t factor);
+void slideFactor(uint16_t factor);
 void keysHold(bool state);
 };
 
